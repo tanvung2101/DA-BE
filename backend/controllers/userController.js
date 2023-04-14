@@ -4,15 +4,15 @@ const User = require("../models/userModel");
 const sendToken = require("../utils/jwtToken");
 const sendEmail = require("../utils/sendEmail");
 const crypto = require("crypto");
-const cloudinary = require('cloudinary')
+const cloudinary = require("cloudinary");
 
-exports.registerUser = catchAsyncErrors(async (req, res) => {
-
+// Register a User
+exports.registerUser = catchAsyncErrors(async (req, res, next) => {
   const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
     folder: "avatars",
     width: 150,
     crop: "scale",
-  })
+  });
 
   const { name, email, password } = req.body;
 
@@ -26,17 +26,17 @@ exports.registerUser = catchAsyncErrors(async (req, res) => {
     },
   });
 
-  sendToken(user, 200, res);
+  sendToken(user, 201, res);
 });
 
-// lOGIN USER
+// Login User
 exports.loginUser = catchAsyncErrors(async (req, res, next) => {
   const { email, password } = req.body;
 
-  //checking if user has given password and email both
+  // checking if user has given password and email both
 
   if (!email || !password) {
-    return next(new ErrorHander("Please enter email & password", 400));
+    return next(new ErrorHander("Please Enter Email & Password", 400));
   }
 
   const user = await User.findOne({ email }).select("+password");
@@ -80,9 +80,7 @@ exports.forgotPassword = catchAsyncErrors(async (req, res, next) => {
 
   await user.save({ validateBeforeSave: false });
 
-  const resetPasswordUrl = `${req.protocol}://${req.get(
-    "host"
-  )}/password/reset/${resetToken}`;
+  const resetPasswordUrl = `http://localhost:3000/password/reset/${resetToken}`;
 
   const message = `Your password reset token is :- \n\n ${resetPasswordUrl} \n\nIf you have not requested this email then, please ignore it.`;
 
@@ -236,27 +234,6 @@ exports.getSingleUser = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-// update User Role
-exports.updateProfile = catchAsyncErrors(async (req, res, next) => {
-  const newUserDate = {
-    name: req.body.name,
-    email: req.body.email,
-    role:req.body.role,
-  };
-
-  // We will add cloundinary later
-
-  const user = await User.findOneAndUpdate(req.user.id, newUserDate, {
-    new: true,
-    runValidators: true,
-    useFindAndModify: false,
-  });
-
-  res.status(200).json({
-    success: true,
-  });
-});
-
 // update User Role -- Admin
 exports.updateUserRole = catchAsyncErrors(async (req, res, next) => {
   const newUserData = {
@@ -290,7 +267,7 @@ exports.deleteUser = catchAsyncErrors(async (req, res, next) => {
 
   await cloudinary.v2.uploader.destroy(imageId);
 
-  await user.deleteOne();
+  await user.deleteOne({_id: req.params.id});
 
   res.status(200).json({
     success: true,
